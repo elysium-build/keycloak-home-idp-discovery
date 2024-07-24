@@ -31,32 +31,40 @@ public final class EmailHomeIdpDiscoverer implements HomeIdpDiscoverer {
     @Override
     public List<IdentityProviderModel> discoverForUser(AuthenticationFlowContext context, String username) {
         EmailHomeIdpDiscovererConfig config = new EmailHomeIdpDiscovererConfig(context.getAuthenticatorConfig());
-        DomainExtractor domainExtractor = new DomainExtractor(config);
-
-        String realmName = context.getRealm().getName();
-        LOG.tracef("Trying to discover home IdP for username '%s' in realm '%s' with authenticator config '%s'",
-            username, realmName, config.getAlias());
-
-        List<IdentityProviderModel> homeIdps = new ArrayList<>();
-
         final Optional<Domain> emailDomain;
+        List<IdentityProviderModel> homeIdps = new ArrayList<>();
         UserModel user = users.lookupBy(username);
-        if (user == null) {
-            LOG.tracef("No user found in AuthenticationFlowContext. Extracting domain from provided username '%s'.",
-                username);
-            emailDomain = domainExtractor.extractFrom(username);
+        DomainExtractor domainExtractor = new DomainExtractor(config);
+        String realmName = context.getRealm().getName();
+        String userAttributeName = config.userAttribute();
+
+        // Below in the if statement is the overiding part for epicon customer tag check
+        if (isEpicon(context)) {
+            LOG.warnf("Overriding Plugin using request header for %s", userAttributeName);
+            String customerTag = context.getHttpRequest().getHttpHeaders().getHeaderString(userAttributeName.equalsIgnoreCase("customertag")? "X-Customer-Tag" : "host");
+            Domain DomainizedTag = new Domain(customerTag);
+            emailDomain = Optional.ofNullable(DomainizedTag);
         } else {
-            LOG.tracef("User found in AuthenticationFlowContext. Extracting domain from stored user '%s'.",
-                user.getId());
-            if (EMAIL_ATTRIBUTE.equalsIgnoreCase(config.userAttribute()) && !user.isEmailVerified()
-                && !config.forwardUserWithUnverifiedEmail()) {
-                LOG.warnf("Email address of user '%s' is not verified and forwarding not enabled", user.getId());
-                emailDomain = Optional.empty();
+            // In this else block is the original logic 
+            LOG.tracef("Trying to discover home IdP for username '%s' in realm '%s' with authenticator config '%s'",
+                username, realmName, config.getAlias());
+            if (user == null) {
+                LOG.tracef("No user found in AuthenticationFlowContext. Extracting domain from provided username '%s'.",
+                    username);
+                emailDomain = domainExtractor.extractFrom(username);
             } else {
-                emailDomain = domainExtractor.extractFrom(user);
+                LOG.tracef("User found in AuthenticationFlowContext. Extracting domain from stored user '%s'.",
+                    user.getId());
+                if (EMAIL_ATTRIBUTE.equalsIgnoreCase(config.userAttribute()) && !user.isEmailVerified()
+                    && !config.forwardUserWithUnverifiedEmail()) {
+                    LOG.warnf("Email address of user '%s' is not verified and forwarding not enabled", user.getId());
+                    emailDomain = Optional.empty();
+                } else {
+                    emailDomain = domainExtractor.extractFrom(user);
+                }
             }
         }
-
+        
         if (emailDomain.isPresent()) {
             Domain domain = emailDomain.get();
             homeIdps = discoverHomeIdps(context, domain, user, username);
@@ -99,11 +107,17 @@ public final class EmailHomeIdpDiscoverer implements HomeIdpDiscoverer {
             idpsWithMatchingDomain = emptyList();
         }
 
-        // Prefer linked IdP with matching domain first
-        List<IdentityProviderModel> homeIdps = getLinkedIdpsFrom(idpsWithMatchingDomain, linkedIdps);
+        // Prefer linked IdP with matching domain first //epicon - only if not using customer tag
+        List<IdentityProviderModel> homeIdps;
+        if (isEpicon(context)){
+            homeIdps = idpsWithMatchingDomain;
+        }else{
+            homeIdps = getLinkedIdpsFrom(idpsWithMatchingDomain, linkedIdps);
+        }
+        
 
         if (homeIdps.isEmpty()) {
-            if (!linkedIdps.isEmpty()) {
+            if (!linkedIdps.isEmpty() && !isEpicon(context)) {
                 // Prefer linked and enabled IdPs without matching domain in favor of not linked IdPs with matching domain
                 homeIdps = getLinkedIdpsFrom(candidateIdps, linkedIdps);
             }
@@ -127,6 +141,14 @@ public final class EmailHomeIdpDiscoverer implements HomeIdpDiscoverer {
             .collect(Collectors.joining(","));
         LOG.tracef("Found %s IdPs [%s] with %s domain '%s' for user '%s'",
             idpQualifier, homeIdpsString, domainQualifier, domain, username);
+    }
+
+    public boolean isEpicon(AuthenticationFlowContext context){
+
+        EmailHomeIdpDiscovererConfig config = new EmailHomeIdpDiscovererConfig(context.getAuthenticatorConfig());
+        String UA = config.userAttribute();
+        return UA.equalsIgnoreCase("customertag") || UA.equalsIgnoreCase("host_header");
+        // return false;
     }
 
     private List<IdentityProviderModel> getLinkedIdpsFrom(List<IdentityProviderModel> enabledIdpsWithMatchingDomain, Map<String, String> linkedIdps) {

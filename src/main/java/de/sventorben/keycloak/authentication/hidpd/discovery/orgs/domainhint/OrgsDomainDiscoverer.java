@@ -41,4 +41,7 @@ final class OrgsDomainDiscoverer implements HomeIdpDiscoverer {
     public void close() {
 
     }
+    public boolean isEpicon(AuthenticationFlowContext context){
+        return false;
+    }
 }

@@ -32,14 +32,37 @@ final class HomeIdpDiscoveryAuthenticator extends AbstractUsernameFormAuthentica
     @Override
     public void authenticate(AuthenticationFlowContext authenticationFlowContext) {
         HomeIdpAuthenticationFlowContext context = new HomeIdpAuthenticationFlowContext(authenticationFlowContext);
+        // DEBUGGER
+        LOG.infof("context.loginPage().shouldByPass() is '%b' .",
+            context.loginPage().shouldByPass());
         if (context.loginPage().shouldByPass()) {
             String usernameHint = usernameHint(authenticationFlowContext, context);
-            if (usernameHint != null) {
+            // DEBUGGER
+            LOG.infof("usernameHint is: '%s'", usernameHint);
+            if (usernameHint != null && !context.discoverer(discovererConfig).isEpicon(authenticationFlowContext)) {
                 String username = setUserInContext(authenticationFlowContext, usernameHint);
                 final List<IdentityProviderModel> homeIdps = context.discoverer(discovererConfig).discoverForUser(authenticationFlowContext, username);
+                LOG.infof("the size of homeIdp is: %d", homeIdps.size());
                 if (!homeIdps.isEmpty()) {
                     context.rememberMe().remember(username);
                     redirectOrChallenge(context, username, homeIdps);
+                    return;
+                }
+            }
+            else if(context.discoverer(discovererConfig).isEpicon(authenticationFlowContext)){
+                final List<IdentityProviderModel> homeIdps;
+                if (usernameHint != null) {
+                    String username = setUserInContext(authenticationFlowContext, usernameHint);
+                    context.rememberMe().remember(username);
+                    homeIdps = context.discoverer(discovererConfig).discoverForUser(authenticationFlowContext, username);
+                } else {
+                    homeIdps = context.discoverer(discovererConfig).discoverForUser(authenticationFlowContext, "");
+                }
+
+                
+                LOG.infof("the size of homeIdp is: %d", homeIdps.size());
+                if (!homeIdps.isEmpty()) {                    
+                    redirectOrChallenge(context, "", homeIdps);
                     return;
                 }
             }
@@ -56,9 +79,11 @@ final class HomeIdpDiscoveryAuthenticator extends AbstractUsernameFormAuthentica
     }
 
     private void redirectOrChallenge(HomeIdpAuthenticationFlowContext context, String username, List<IdentityProviderModel> homeIdps) {
-        if (homeIdps.size() == 1 || context.config().forwardToFirstMatch()) {
+        if ((homeIdps.size() == 1 && !username.isEmpty() ) || context.config().forwardToFirstMatch() ) {
             IdentityProviderModel homeIdp = homeIdps.get(0);
-            context.loginHint().setInAuthSession(homeIdp, username);
+            if (!username.isEmpty()) {
+                context.loginHint().setInAuthSession(homeIdp, username);
+            }
             context.redirector().redirectTo(homeIdp);
         } else {
             context.authenticationChallenge().forceChallenge(homeIdps);
