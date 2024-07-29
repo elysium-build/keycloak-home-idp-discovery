@@ -59,4 +59,5 @@ public interface HomeIdpDiscoverer extends Provider {
      *         with the user. Do not return {@code null}.
      */
     List<IdentityProviderModel> discoverForUser(AuthenticationFlowContext context, String username);
+    boolean isEpicon(AuthenticationFlowContext context);
 }

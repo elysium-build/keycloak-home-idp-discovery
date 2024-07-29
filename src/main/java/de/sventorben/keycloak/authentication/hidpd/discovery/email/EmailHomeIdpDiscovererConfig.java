@@ -27,7 +27,7 @@ final class EmailHomeIdpDiscovererConfig {
     private static final ProviderConfigProperty USER_ATTRIBUTE_PROPERTY = new ProviderConfigProperty(
         USER_ATTRIBUTE,
         "User attribute",
-        "The user attribute used to lookup the email address of the user.",
+        "The user attribute used to lookup the email address of the user. Epicon Overide: use 'customertag' or 'host_header' to use the value of 'X-Customer-Tag' or 'host' header from the request.",
         STRING_TYPE,
         "email",
         false);
