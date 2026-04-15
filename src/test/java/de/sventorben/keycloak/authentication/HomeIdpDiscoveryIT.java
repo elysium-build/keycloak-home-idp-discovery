@@ -14,6 +14,8 @@ import org.keycloak.admin.client.Keycloak;
 import org.openqa.selenium.Cookie;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testcontainers.containers.BrowserWebDriverContainer;
 import org.testcontainers.containers.BrowserWebDriverContainer.VncRecordingMode;
 import org.testcontainers.containers.Network;
@@ -68,7 +70,7 @@ class HomeIdpDiscoveryIT {
     }
 
     @Test
-    @DisplayName("Given user's email is has a primary managed domain, redirect")
+    @DisplayName("Given user's email has a primary managed domain, redirect")
     public void redirectIfUserHasDomain() {
         accountConsolePage().open();
         testRealmLoginPage().signIn("test@example.com");
@@ -76,7 +78,7 @@ class HomeIdpDiscoveryIT {
     }
 
     @Test
-    @DisplayName("Given user's email is has an alternate managed domain, redirect")
+    @DisplayName("Given user's email has an alternate managed domain, redirect")
     public void redirectIfUserHasAlternateDomain() {
         accountConsolePage().open();
         testRealmLoginPage().signIn("test2@example.net");
@@ -126,7 +128,6 @@ class HomeIdpDiscoveryIT {
         assertRedirectedToIdp();
     }
 
-    /* Temporarily disabled as failure only seems to occur in automated tests, but not when testing manually
     @Nested
     @DisplayName("Remember Me")
     class RememberMe {
@@ -183,7 +184,6 @@ class HomeIdpDiscoveryIT {
                 .doesNotContain(COOKIE_NAME_REMEMBER_ME);
         }
     }
-    */
 
     @Nested
     @DisplayName("Given login page should be bypassed")
@@ -434,6 +434,29 @@ class HomeIdpDiscoveryIT {
     }
 
     @Nested
+    @DisplayName("GH-475: Given no session and prompt=login")
+    class GivenNoSessionAndPromptLogin {
+
+        @BeforeEach
+        public void setUp() {
+            upstreamIdpMock().redirectToDownstreamWithPromptLogin("test");
+        }
+
+        @Test
+        @DisplayName("then show username form field")
+        public void thenShowUsernameFormField() {
+            testRealmLoginPage().assertUsernameFieldIsDisplayed();
+        }
+
+        @Test
+        @DisplayName("then username form field is empty")
+        public void thenUsernameFormFieldIsEmpty() {
+            testRealmLoginPage().assertUsernameFieldIsPrefilledWith("");
+        }
+
+    }
+
+    @Nested
     @DisplayName("Given user is linked to an IdP already")
     class GivenUserHasIdpLinkConfigured {
 
@@ -543,6 +566,7 @@ class HomeIdpDiscoveryIT {
     }
 
     private void assertRedirectedTo(String url) {
+        new WebDriverWait(webDriver, Duration.ofSeconds(5)).until(ExpectedConditions.urlContains(url));
         assertThat(webDriver.getCurrentUrl()).startsWith(url);
     }
 

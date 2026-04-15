@@ -4,7 +4,7 @@
 
     <groupId>de.sventorben.keycloak</groupId>
     <artifactId>keycloak-home-idp-discovery</artifactId>
-    <version>25.0.1-SNAPSHOT</version>
+    <version>26.2.1-SNAPSHOT</version>
 
     <name>Keycloak: Home IdP Discovery</name>
     <description>A Keycloak authenticator to redirect users to their home IdP</description>
@@ -51,14 +51,14 @@
         <maven.compiler.release>17</maven.compiler.release>
 
         <!-- For compilation -->
-        <version.keycloak>25.0.1</version.keycloak>
+        <version.keycloak>26.5.5</version.keycloak>
 
         <!-- For compatibility tests -->
         <keycloak.version>${version.keycloak}</keycloak.version>
 
-        <version.mockito>5.12.0</version.mockito>
-        <version.testcontainers>1.20.0</version.testcontainers>
-        <version.selenium>4.22.0</version.selenium>
+        <version.mockito>5.22.0</version.mockito>
+        <version.testcontainers>1.21.3</version.testcontainers>
+        <version.selenium>4.41.0</version.selenium>
     </properties>
 
     <build>
@@ -79,7 +79,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.3.1</version>
+                    <version>3.5.5</version>
                     <configuration>
                         <systemPropertyVariables>
                             <org.jboss.logging.provider>log4j2</org.jboss.logging.provider>
@@ -92,10 +92,11 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
-                    <version>3.3.1</version>
+                    <version>3.5.5</version>
                     <configuration>
                         <systemPropertyVariables>
                             <org.jboss.logging.provider>log4j2</org.jboss.logging.provider>
+                            <webdriver.remote.enableTracing>false</webdriver.remote.enableTracing>
                             <keycloak.version>${keycloak.version}</keycloak.version>
                         </systemPropertyVariables>
                     </configuration>
@@ -103,7 +104,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>3.1.1</version>
+                    <version>3.3.1</version>
                     <configuration>
                         <scmCommentPrefix>chore(release):</scmCommentPrefix>
                         <tagNameFormat>v@{project.version}</tagNameFormat>
@@ -116,7 +117,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.15.0</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -134,7 +135,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.3.1</version>
+                <version>3.4.0</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -148,7 +149,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
-                <version>3.1.2</version>
+                <version>3.1.4</version>
             </plugin>
         </plugins>
     </build>
@@ -160,7 +161,15 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.10.3</version>
+                <version>6.0.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>1.60.1</version><!-- needs to be aligne with the quarkus version used by KC -->
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -193,6 +202,12 @@
             <artifactId>keycloak-services</artifactId>
             <version>${version.keycloak}</version>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jboss.slf4j</groupId>
+                    <artifactId>slf4j-jboss-logmanager</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Test -->
@@ -221,7 +236,7 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.26.3</version>
+            <version>3.27.7</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -252,27 +267,27 @@
         <dependency>
             <groupId>com.github.dasniko</groupId>
             <artifactId>testcontainers-keycloak</artifactId>
-            <version>3.4.0</version>
+            <version>3.8.0</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-admin-client</artifactId>
-            <version>${version.keycloak}</version>
+            <version>26.0.7</version>
             <scope>test</scope>
         </dependency>
         <!-- Logging -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.23.1</version>
+            <version>2.25.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j2-impl</artifactId>
-            <version>2.23.1</version>
+            <version>2.25.3</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
